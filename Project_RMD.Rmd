@@ -1,0 +1,186 @@
+---
+title: "Project"
+author: "Khwezi Kgalema"
+date: "2 October 2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE,echo=FALSE,message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(R2ucare)
+
+toad <- read_inp(file = "C:/Users/Khwezi/Documents/Honors project/Project data/Rose.inp")
+
+##get the matrix##
+ch <- toad$encounter_histories
+
+##get the number of CR encounter histories
+n <- toad$sample_size
+```
+
+##Goodness of test
+
+##Overall CJS
+```{r,echo=FALSE,message=FALSE,warning=FALSE}
+
+##Assessing the overall fit of the CJS model using the function overall_CJS
+
+ov_test = overall_CJS(ch,n)
+
+ov_test
+```
+The overall CJS model doesn't fit the data well.
+
+
+##Test2ct
+
+Testing for the effect of trap dependence
+```{r test2ct, echo=FALSE, message=FALSE,warning=FALSE}
+##Test for an effect of trap-dependence
+t2ct = test2ct(ch,n,verbose = FALSE)
+
+t2ct
+```
+
+The null hypothesis is that there isn't any effect of trap dependence; due to a p-value of 0, we reject the null hypothesis and conclude that there's the effect of trap dependence. The negative signed test, tells us that there's an excess of individuals encountered at a given occasion among the individuals encountered at the previous occasion. There's an effect of trap happiness, where more individuals were encountered at a given occasion than expected.
+
+
+
+
+##Test3sr
+Testing for transient effects
+```{r test3sr, echo=FALSE,message=FALSE,warning=FALSE}
+##Test for transient effect
+t3sr = test3sr(ch,n,verbose = FALSE)
+t3sr
+
+```
+The null hypothesis is that there's no transient effect but due to a p-value of 0, we reject the null hypothesis and conclude that there's a transient effect. The sign test is positive, meaning that there's an excess of individuals that were never encountered again among the newly marked. 
+
+##Test3sm
+
+```{r test3sm, echo=FALSE,message=FALSE,warning=FALSE}
+t3sm = test3sm(ch,n,verbose = FALSE)
+t3sm
+
+```
+The null hypothesis is that among those individuals seen again, when they were seen doesn't differ among previously and newly marked individuals. with a p-value of 0.2, we fail to reject the null hypothesis.
+
+
+##Test2cl
+
+```{r test2cl, echo=FALSE,message=FALSE,warning=FALSE}
+##Test 2cl
+
+t2cl = test2cl(ch,n,verbose = FALSE)
+t2cl
+
+```
+
+The null hypothesis is that, there's no difference in the timing of re-encounters between the individuals encountered and not encountered at occasion i, conditional on prescence at both occasions i and $i^{+2}$. The p-value suggests that we reject the null hypothesis.
+
+
+Based on the decision tree from Gimenez et. al (2018), the model to fit is the CJS model with trap dependence, transience and overdispersion
+
+Therefore trying to fit a new model that only incorporates transience and trap-dependence effects yields a p-value of:
+```{r echo=FALSE,message=FALSE}
+##Subtract the components 3SR and 2CT to the CJS test statistic
+stat_new = ov_test$chi2 - (t3sr$test3sr[[1]] + t2ct$test2ct[[1]])
+
+##Calculate degree of freedom associated with the new test statistic
+df_new = ov_test$degree_of_freedom - (t3sr$test3sr[[2]] + t2ct$test2ct[[2]])
+
+#Computre a p-value
+1 - pchisq(stat_new, df_new)
+```
+
+##Modifying the data
+
+In the capture histories there are quite a few anomalies which are denoted by the capture histories with 4 or more internal zeroes. Typically Rose's toadlet doesn't survive for more than 3 years and there are capture histories that imply that some toadlets were captured in 2007 and only seen again in 2017 and its anomalies like these that may distort the goodness of fit results. Because the goodness of fit test is designed in such a way that if it detects anomalies, it will either allocate them as some form of trap dependence or transience; but in this case, we will remove the 2007 capture histories because there were some issues with the capturing the toadlets in the sense that the toe clipping was inconsistent due to the inexperience of some of the people who assisted in the fieldwork.Therefore we will omit the 2007 capture histories and then re-run the goodness of fit testing.
+
+
+```{r modifying, echo=FALSE,message=FALSE,warning=FALSE}
+
+#11, 60, 61, 62, 63, 64, 65, 97
+##removing 2007 capture histories
+mod_ch = ch[-c(11, 60, 61, 62, 63, 64, 65, 97),]
+
+mod_ch = mod_ch[,-1]
+
+mod_n = n[-c(11,60,61,62,63,64,65,97)]
+```
+
+
+##Overall CJS
+```{r,echo=FALSE,message=FALSE,warning=FALSE}
+
+##Assessing the overall fit of the CJS model using the function overall_CJS
+
+mod_ov_test = overall_CJS(mod_ch,mod_n)
+
+mod_ov_test
+
+```
+
+
+The CJS model still doesn't fit the modified capture histories.
+
+##Test2ct
+
+Testing for the effect of trap dependence
+```{r mtest2ct, echo=FALSE, message=FALSE,warning=FALSE}
+##Test for an effect of trap-dependence
+mod_t2ct = test2ct(mod_ch, mod_n,verbose = FALSE)
+
+mod_t2ct
+```
+
+
+The result from the test of trap dependence still remains, that there is trap dependence and a negative sign test indicates that there is an abundance of individuals encountered at a given occasion among the individuals encountered at a previous occcasion.
+
+
+##Test3sr
+Testing for transient effects
+```{r mtest3sr, echo=FALSE,message=FALSE,warning=FALSE}
+##Test for transient effect
+mod_t3sr = test3sr(mod_ch,mod_n,verbose = FALSE)
+mod_t3sr
+
+```
+
+The above test indicates that there's some transient effects, and the positive sign test indicates that there's an excess of individuals that were never seen again among the newly marked. 
+
+
+##Test3sm
+
+```{r mtest3sm, echo=FALSE,message=FALSE,warning=FALSE}
+mod_t3sm = test3sm(mod_ch,mod_n,verbose = FALSE)
+mod_t3sm
+
+```
+
+Due to a sufficiently large p-value, we fail to reject the null hypothesis and conclude that among the individuals seen again; when they were seen again doesn't differ among previously seen and newly marked individuals.
+
+##Test2cl
+
+```{r mtest2cl, echo=FALSE,message=FALSE,warning=FALSE}
+##Test 2cl
+
+mod_t2cl = test2cl(mod_ch,mod_n,verbose = FALSE)
+mod_t2cl
+
+
+```
+
+
+We reject the null hypothesis and conclude that there's a difference in the timing of re-encounters between the individuals encountered and not encountered at occasion i, conditional on prescence at both occasions i and $i^{+2}$. 
+
+The results from the goodness of fit test still remain being similar, where the differences are that with the modified data they have slightly smaller test statistics but the outcome of the tests remain the same. 
+
+##Analyzing the reduced m-array
+```{r mreduced marray, echo=FALSE,message=FALSE,warning=FALSE}
+red_marray = marray(mod_ch, mod_n)
+red_marray
+```
+
+In the first occasion/in 2008 a total of 28 toadlets were captured, marked and released. Out of those 28 toadlets captured for the first time, only 3 were ever recaptured at least once in the next 12 occasions; with a period of 5 years between the first and second recapture
